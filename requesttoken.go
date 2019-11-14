@@ -48,17 +48,25 @@ func getSessionAndToken(c Converter, r *http.Request) ([]byte, []byte) {
 
 func (m *Manager) Provide(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		if sessionID, _ := getSessionAndToken(m.Converter, r); sessionID != nil {
-			token, err := m.Store.Create(sessionID, time.Now().Add(m.TTL))
-			if err != nil {
-				panic(err)
-			}
-
-			m.Converter.SetToken(r, rw, token)
+		if err := m.ProvideToken(r, rw); err != nil {
+			panic(err)
 		}
 
 		handler.ServeHTTP(rw, r)
 	})
+}
+
+func (m *Manager) ProvideToken(r *http.Request, rw http.ResponseWriter) error {
+	if sessionID, _ := getSessionAndToken(m.Converter, r); sessionID != nil {
+		token, err := m.Store.Create(sessionID, time.Now().Add(m.TTL))
+		if err != nil {
+			return err
+		}
+
+		m.Converter.SetToken(r, rw, token)
+	}
+
+	return nil
 }
 
 func (m *Manager) Enforce(handler http.Handler) http.Handler {
