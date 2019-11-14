@@ -31,6 +31,10 @@ type Store interface {
 	Consume(sessionID []byte, token []byte, now time.Time) error
 }
 
+type Cleaner interface {
+	Cleanup(now time.Time, holdExpiredRecordsFor time.Duration)
+}
+
 type Manager struct {
 	Converter Converter
 	Store     Store
@@ -97,4 +101,10 @@ func (m *Manager) Enforce(handler http.Handler) http.Handler {
 
 		handler.ServeHTTP(rw, r)
 	})
+}
+
+func (m *Manager) Cleanup(now time.Time, holdExpiredRecordsFor time.Duration) {
+	if cl, ok := m.Store.(Cleaner); ok {
+		cl.Cleanup(now, holdExpiredRecordsFor)
+	}
 }
