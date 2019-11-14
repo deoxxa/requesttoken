@@ -33,7 +33,7 @@ func (s *Store) Create(sessionID []byte, expiresAt time.Time) ([]byte, error) {
 	}
 
 	if _, err := s.DB.Exec(
-		"insert into "+table+" (token, session_id, expires_at) values (?, ?, ?)",
+		"insert into "+table+" (token, session_id, expires_at) values ($1, $2, $3)",
 		token,
 		base64.StdEncoding.EncodeToString(sessionID),
 		expiresAt,
@@ -54,7 +54,7 @@ func (s *Store) Consume(sessionID []byte, token []byte, now time.Time) error {
 	}
 
 	if err := s.DB.QueryRow(
-		"select session_id, expires_at from "+table+" where token = ?",
+		"select session_id, expires_at from "+table+" where token = $1",
 		string(token),
 	).Scan(&tokenSessionID, &tokenExpiresAt); err != nil {
 		if err == sql.ErrNoRows {
@@ -77,7 +77,7 @@ func (s *Store) Consume(sessionID []byte, token []byte, now time.Time) error {
 		return requesttoken.ErrTokenExpired
 	}
 
-	if _, err := s.DB.Exec("delete from "+table+" where token = ?", string(token)); err != nil {
+	if _, err := s.DB.Exec("delete from "+table+" where token = $1", string(token)); err != nil {
 		return err
 	}
 
